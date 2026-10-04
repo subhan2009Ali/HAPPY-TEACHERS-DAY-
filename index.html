@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Happy Teachers Day 🌸</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,600&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<style>
+:root{--night:#1c0f2e;--glow:#43205f;--pink:#ff8fb1;--gold:#ffc247;--leaf:#5fd39a;--paper:#fff1f6}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;overflow:hidden;color:var(--paper);font-family:'Caveat','Segoe Script',cursive;touch-action:manipulation;
+  background:radial-gradient(ellipse at 50% 105%,var(--glow),var(--night) 72%)}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+.layer{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;pointer-events:none;
+  padding:env(safe-area-inset-top,0px) 20px env(safe-area-inset-bottom,0px)}
+
+/* intro: the seed */
+#intro{justify-content:center;gap:28px;text-align:center;transition:opacity .8s,transform .8s}
+#intro.gone{opacity:0;transform:scale(.9)}
+#intro p{font-size:clamp(1.7rem,6vw,2.6rem);max-width:16em;line-height:1.2}
+#seed{pointer-events:auto;width:84px;height:84px;border:0;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;cursor:pointer;
+  background:radial-gradient(circle at 35% 30%,#fff3c4,var(--gold) 55%,#d9892b);
+  box-shadow:0 0 0 0 rgba(255,194,71,.6),0 0 40px rgba(255,194,71,.55);animation:pulse 1.8s ease-in-out infinite}
+#seed:focus-visible{outline:3px solid var(--pink);outline-offset:6px}
+#intro small{font-size:1.5rem;color:var(--gold)}
+@keyframes pulse{50%{transform:scale(1.12);box-shadow:0 0 0 22px rgba(255,194,71,0),0 0 60px rgba(255,194,71,.8)}}
+
+/* title */
+#title{justify-content:flex-start;padding-top:calc(env(safe-area-inset-top,0px) + 7vh);text-align:center;opacity:0;filter:blur(14px);
+  transform:translateY(14px);transition:opacity 1.6s,filter 1.6s,transform 1.6s}
+#title.show{opacity:1;filter:none;transform:none}
+h1{font-family:'Fraunces',Georgia,serif;font-style:italic;font-weight:600;font-size:clamp(2.1rem,9vw,5rem);line-height:1.05;
+  letter-spacing:.01em;text-shadow:0 0 30px rgba(255,143,177,.65),0 2px 0 rgba(0,0,0,.25)}
+#title p{margin-top:14px;font-size:clamp(1.5rem,5vw,2.2rem);color:var(--gold)}
+
+/* hint + counter */
+#hint{justify-content:flex-end;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 22px);text-align:center;opacity:0;transition:opacity 1s;font-size:1.5rem}
+#hint.show{opacity:.9}
+
+/* floating blessings */
+.bless{position:fixed;transform:translateX(-50%);width:max-content;max-width:min(230px,70vw);text-align:center;font-size:1.55rem;line-height:1.15;
+  pointer-events:none;text-shadow:0 2px 10px #000;animation:rise 3.6s ease-out forwards}
+@keyframes rise{0%{opacity:0;margin-top:20px}15%{opacity:1}80%{opacity:1}100%{opacity:0;margin-top:-70px}}
+@media (prefers-reduced-motion:reduce){#seed{animation:none}.bless{animation-duration:4s}}
+</style>
+</head>
+<body>
+<canvas id="c" aria-hidden="true"></canvas>
+
+<main class="layer" id="intro">
+  <p id="greet">Dear Teacher, someone planted a surprise for you.</p>
+  <button id="seed" aria-label="Tap the seed to begin"></button>
+  <small>Tap the seed</small>
+</main>
+
+<header class="layer" id="title">
+  <h1>HAPPY TEACHERS DAY</h1>
+  <p>BY SUBHAN ALI RB214</p>
+</header>
+
+<footer class="layer" id="hint"><span id="hintText">Tap anywhere to plant a blessing</span></footer>
+
+<script>
+(function(){
+  var cv=document.getElementById('c'),ctx=cv.getContext('2d'),W,H;
+  var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var hues=[340,350,15,45,290,320];
+  var blessings=[
+    "May your kindness bloom wherever you go 🌸",
+    "Thank you for planting seeds of knowledge",
+    "Wishing you peace, health and endless joy",
+    "You taught us how to grow 🌷",
+    "JazakAllah khair for every lesson",
+    "May Allah bless you with happiness and success",
+    "Your lessons stay with us for life",
+    "A teacher is a gardener of minds 🌻",
+    "May your days be as bright as these flowers",
+    "Thank you for believing in us",
+    "You make learning beautiful 🌼"
+  ];
+  var flowers=[],rain=[],started=false,planted=0,bi=Math.floor(Math.random()*blessings.length);
+
+  function size(){
+    var d=Math.min(window.devicePixelRatio||1,2);
+    W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;ctx.setTransform(d,0,0,d,0,0);
+  }
+  addEventListener('resize',size);size();
+
+  // optional personal greeting: yourpage.github.io/?to=Sir%20Ahmed
+  var to=new URLSearchParams(location.search).get('to');
+  if(to)document.getElementById('greet').textContent='Dear '+to+', someone planted a surprise for you.';
+
+  for(var i=0;i<(reduce?0:26);i++)rain.push({x:Math.random()*W,y:-Math.random()*H,s:4+Math.random()*5,v:.4+Math.random()*.8,ph:Math.random()*6,h:hues[i%6]});
+
+  var ease=function(t){return 1-Math.pow(1-t,3)};
+
+  function plant(x,y,big){
+    flowers.push({x:x,y:y,bx:x+(Math.random()-.5)*90,t0:performance.now(),dur:reduce?1:(big?2600:1700),
+      hue:hues[Math.random()*hues.length|0],r:big?60:24+Math.random()*18,n:big?12:5+(Math.random()*4|0),
+      rot:Math.random()*6.28,leaf:Math.random()>.3,ph:Math.random()*6,big:!!big});
+    if(flowers.length>90)flowers.shift();
+    planted++;
+  }
+
+  function bless(x,y){
+    var el=document.createElement('div');
+    el.className='bless';el.textContent=blessings[bi++%blessings.length];
+    el.style.left=Math.min(Math.max(x,115),W-115)+'px';
+    el.style.top=Math.max(y-70,120)+'px';
+    el.addEventListener('animationend',function(){el.remove()});
+    document.body.appendChild(el);
+  }
+
+  function drawFlower(f,now){
+    var p=Math.min((now-f.t0)/f.dur,1),g=ease(Math.min(p/.65,1)),b=p<.6?0:ease((p-.6)/.4);
+    var sway=Math.sin(now/900+f.ph)*6*p,tx=f.x+sway,ty=H-(H-f.y)*g,cy=(H+ty)/2;
+    ctx.strokeStyle='#4fbf88';ctx.lineWidth=f.big?5:3;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(f.bx,H+4);ctx.quadraticCurveTo(f.bx,cy,tx,ty);ctx.stroke();
+    if(f.leaf&&g>.4){
+      var t=.5,u=1-t,lx=u*u*f.bx+2*u*t*f.bx+t*t*tx,ly=u*u*(H+4)+2*u*t*cy+t*t*ty,s=Math.min((g-.4)/.4,1);
+      ctx.save();ctx.translate(lx,ly);ctx.rotate(f.bx<f.x?.9:-.9);ctx.fillStyle='#5fd39a';
+      ctx.beginPath();ctx.ellipse(0,-f.r*.45*s,f.r*.18*s,f.r*.45*s,0,0,6.283);ctx.fill();ctx.restore();
+    }
+    if(b<=0)return;
+    ctx.save();ctx.translate(tx,ty);ctx.rotate(f.rot+now/9000);
+    var rings=f.big?2:1;
+    for(var k=0;k<rings;k++){
+      var rr=f.r*(k?.62:1),L=k?72:68;
+      ctx.fillStyle='hsl('+f.hue+',90%,'+L+'%)';ctx.strokeStyle='hsla('+f.hue+',70%,45%,.5)';ctx.lineWidth=1;
+      for(var i=0;i<f.n;i++){
+        ctx.rotate(6.283/f.n);ctx.beginPath();
+        ctx.ellipse(0,-rr*.55*b,rr*.27*b,rr*.52*b,0,0,6.283);ctx.fill();ctx.stroke();
+      }
+      ctx.rotate(.3);
+    }
+    ctx.fillStyle='#ffc247';ctx.beginPath();ctx.arc(0,0,f.r*.2*b,0,6.283);ctx.fill();
+    ctx.restore();
+  }
+
+  function frame(now){
+    ctx.clearRect(0,0,W,H);
+    for(var i=0;i<flowers.length;i++)drawFlower(flowers[i],now);
+    if(started){
+      for(var j=0;j<rain.length;j++){
+        var r=rain[j];r.y+=r.v;r.x+=Math.sin(now/700+r.ph)*.5;
+        if(r.y>H+10){r.y=-10;r.x=Math.random()*W}
+        ctx.save();ctx.translate(r.x,r.y);ctx.rotate(now/600+r.ph);
+        ctx.fillStyle='hsla('+r.h+',90%,80%,.7)';ctx.beginPath();ctx.ellipse(0,0,r.s*.5,r.s,0,0,6.283);ctx.fill();ctx.restore();
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  document.getElementById('seed').addEventListener('click',function(){
+    document.getElementById('intro').classList.add('gone');
+    plant(W/2,H*.56,true);started=true;
+    setTimeout(function(){document.getElementById('title').classList.add('show')},reduce?0:2300);
+    setTimeout(function(){document.getElementById('hint').classList.add('show')},reduce?0:3600);
+    [[.2,.64],[.8,.62],[.36,.78],[.66,.8],[.1,.82],[.9,.8]].forEach(function(s,i){
+      setTimeout(function(){plant(W*s[0],H*s[1]);if(i%2===0)bless(W*s[0],H*s[1])},1300+i*450);
+    });
+  });
+
+  cv.addEventListener('pointerdown',function(e){
+    if(!started)return;
+    plant(e.clientX,e.clientY);bless(e.clientX,e.clientY);
+    document.getElementById('hintText').textContent='Blessings planted: '+(planted-7>0?planted-7:0)+' 🌸  keep tapping';
+  });
+  // taps on the empty layers should also plant
+  document.getElementById('hint').addEventListener('pointerdown',function(){});
+  addEventListener('pointerdown',function(e){
+    if(started&&e.target!==cv&&e.target.tagName!=='BUTTON'){cv.dispatchEvent(new PointerEvent('pointerdown',{clientX:e.clientX,clientY:e.clientY}))}
+  });
+})();
+</script>
+</body>
+</html>
